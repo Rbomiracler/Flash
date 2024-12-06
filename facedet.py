@@ -3,14 +3,26 @@ import mediapipe as mp
 import serial
 import time
 import threading
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 # Initialize MediaPipe Face Detection
 mp_face_detection = mp.solutions.face_detection
 
-# Initialize Serial Communication
-ser = serial.Serial('COM6', 9600, timeout=1)
+# Check if the application is running in a cloud environment
+IS_CLOUD = os.getenv("IS_CLOUD", "false").lower() == "true"
+
+# Initialize Serial Communication only if not running in a cloud environment
+ser = None
+if not IS_CLOUD:
+    try:
+        ser = serial.Serial('COM6', 9600, timeout=1)  # COM6 for local serial communication
+        print("Serial port initialized.")
+    except serial.SerialException:
+        print("Warning: Serial port COM6 not found. Servo control will be disabled.")
+else:
+    print("Running in cloud environment. Serial port is disabled.")
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -24,15 +36,18 @@ servo_moved = False  # New flag to track servo movement
 # Function to move the servo
 def move_servo():
     """Non-blocking function to move the servo via serial communication."""
-    if ser.isOpen():
+    if ser and ser.isOpen():  # Ensure the serial port is open
         threading.Thread(target=_servo_control, daemon=True).start()
 
 def _servo_control():
-    print("Moving servo to active position...")
-    ser.write(b'f')  # Command to move servo to active position
-    time.sleep(2)    # Wait for 1 second
-    print("Returning servo to home position...")
-    ser.write(b'h')  # Command to return servo to home position
+    if ser:
+        print("Moving servo to active position...")
+        ser.write(b'f')  # Command to move servo to active position
+        time.sleep(2)    # Wait for 1 second
+        print("Returning servo to home position...")
+        ser.write(b'h')  # Command to return servo to home position
+    else:
+        print("Servo control is disabled as no serial port is available.")
 
 # Flask route to get face detection status
 @app.route('/detect_face')
