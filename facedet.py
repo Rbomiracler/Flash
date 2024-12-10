@@ -17,7 +17,7 @@ IS_CLOUD = os.getenv("IS_CLOUD", "false").lower() == "true"
 ser = None
 if not IS_CLOUD:
     try:
-        ser = serial.Serial('COM6', 9600, timeout=1)  # COM6 for local serial communication
+        ser = serial.Serial('COM8', 9600, timeout=1)  # COM6 for local serial communication
         print("Serial port initialized.")
     except serial.SerialException:
         print("Warning: Serial port COM6 not found. Servo control will be disabled.")
